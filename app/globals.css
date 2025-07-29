@@ -2,26 +2,148 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable specific animations that might be disorienting */
+  [data-state="open"][data-side] {
+    animation: none !important;
+  }
+
+  [data-state="closed"] {
+    animation: none !important;
+  }
+
+  /* Provide instant feedback without motion */
+  .motion-reduce\:instant {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+
+    /* Enhanced Primary Colors - Indigo Scale */
+    --primary-50: 225 100% 97%;
+    --primary-100: 226 100% 94%;
+    --primary-500: 239 84% 67%; /* Main primary */
+    --primary-600: 243 75% 59%;
+    --primary-900: 244 58% 51%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Enhanced Secondary Colors - Pink Scale */
+    --secondary-50: 327 73% 97%;
+    --secondary-100: 326 78% 95%;
+    --secondary-500: 330 81% 60%; /* Main secondary */
+    --secondary-600: 333 71% 51%;
+    --secondary-900: 336 84% 17%;
+    --secondary: 326 78% 95%;
+    --secondary-foreground: 336 84% 17%;
+
+    --muted: 326 78% 95%;
+    --muted-foreground: 330 25% 47%;
+    --accent: 326 78% 95%;
+    --accent-foreground: 336 84% 17%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Semantic Colors */
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 200 100% 60%;
+
+    /* Surface and Borders */
+    --surface: 327 73% 98%;
+    --border: 326 40% 88%;
+    --input: 326 40% 88%;
+    --ring: 239 84% 67%;
+
+    --chart-1: 330 81% 60%;
+    --chart-2: 239 84% 67%;
+    --chart-3: 270 91% 65%;
+    --chart-4: 310 70% 58%;
+    --chart-5: 200 100% 60%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
+    --card: 222 84% 5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 84% 5%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Dark mode primary colors - Indigo */
+    --primary-50: 244 58% 15%;
+    --primary-100: 243 50% 20%;
+    --primary-500: 239 84% 67%;
+    --primary-600: 243 75% 59%;
+    --primary-900: 225 100% 97%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 225 100% 97%;
+
+    /* Dark mode secondary colors - Pink */
+    --secondary-50: 336 84% 15%;
+    --secondary-100: 335 50% 20%;
+    --secondary-500: 330 81% 60%;
+    --secondary-600: 333 71% 51%;
+    --secondary-900: 327 73% 97%;
+    --secondary: 335 50% 20%;
+    --secondary-foreground: 327 73% 97%;
+
+    --muted: 335 50% 20%;
+    --muted-foreground: 330 25% 65%;
+    --accent: 335 50% 20%;
+    --accent-foreground: 327 73% 97%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Dark mode semantic colors */
+    --success: 142 70% 45%;
+    --warning: 38 92% 50%;
+    --info: 200 100% 70%;
+
+    /* Dark mode surface and borders */
+    --surface: 335 50% 18%;
+    --border: 335 30% 25%;
+    --input: 335 30% 25%;
+    --ring: 239 84% 67%;
+
+    --chart-1: 330 81% 65%;
+    --chart-2: 239 84% 72%;
+    --chart-3: 270 91% 70%;
+    --chart-4: 310 70% 65%;
+    --chart-5: 200 100% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
