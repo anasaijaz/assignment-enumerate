@@ -90,24 +90,27 @@ export default function MobileMenu() {
 
   // Initialize theme on component mount
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
-    
+    const storedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+    const shouldBeDark =
+      storedTheme === "dark" || (!storedTheme && prefersDark);
+
     setIsDarkMode(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
+    document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
-    
+
     if (newTheme) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   };
 
@@ -225,6 +228,22 @@ export default function MobileMenu() {
 
         {/* Footer */}
         <div className="p-4 border-t border-border bg-muted/30">
+          {/* Theme Toggle */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sun className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Theme</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={isDarkMode}
+                onCheckedChange={toggleTheme}
+                className="data-[state=checked]:bg-primary"
+              />
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+
           <div className="text-sm text-muted-foreground text-center">
             Design System v1.0
           </div>
