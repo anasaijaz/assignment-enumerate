@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -11,6 +11,8 @@ import {
   Palette,
   Layout,
   X,
+  Moon,
+  Sun,
 } from "lucide-react";
 import {
   Collapsible,
@@ -18,6 +20,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/sidebar";
@@ -83,6 +86,30 @@ const menuItems = [
 export default function MobileMenu() {
   const { isMobileMenuOpen, closeMobileMenu } = useUIStore();
   const [openSubmenu, setOpenSubmenu] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize theme on component mount
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
+    
+    setIsDarkMode(shouldBeDark);
+    document.documentElement.classList.toggle('dark', shouldBeDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const toggleSubmenu = (itemId) => {
     setOpenSubmenu(openSubmenu === itemId ? null : itemId);

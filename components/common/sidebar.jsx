@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -12,6 +12,8 @@ import {
   Layout,
   Menu,
   X,
+  Moon,
+  Sun,
 } from "lucide-react";
 import {
   Collapsible,
@@ -19,6 +21,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/sidebar";
@@ -84,6 +87,30 @@ const menuItems = [
 export default function Sidebar({ className }) {
   const { isCollapsed, toggleSidebar } = useUIStore();
   const [openSubmenu, setOpenSubmenu] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize theme on component mount
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
+    
+    setIsDarkMode(shouldBeDark);
+    document.documentElement.classList.toggle('dark', shouldBeDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const toggleSubmenu = (itemId) => {
     setOpenSubmenu(openSubmenu === itemId ? null : itemId);
@@ -193,13 +220,47 @@ export default function Sidebar({ className }) {
       </nav>
 
       {/* Footer */}
-      {!isCollapsed && (
-        <div className="p-3.5 border-t border-border">
+      <div className="p-3.5 border-t border-border">
+        {/* Theme Toggle */}
+        <div className="flex items-center justify-between mb-3">
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Sun className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Theme</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={isDarkMode}
+                  onCheckedChange={toggleTheme}
+                  className="data-[state=checked]:bg-primary"
+                />
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              className="w-full p-2 hover:bg-accent"
+              title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+        </div>
+        
+        {!isCollapsed && (
           <div className="text-xs text-muted-foreground text-center">
             Design System v1.0
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
