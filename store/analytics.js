@@ -49,20 +49,6 @@ export const useAnalyticsStore = create((set, get) => ({
     { name: "Week 4", value: 2100 },
   ],
 
-  // Pie chart data
-  monthlyPieData: [
-    { name: "Products", y: 45, color: "hsl(var(--primary))" },
-    { name: "Services", y: 30, color: "hsl(var(--secondary))" },
-    { name: "Subscriptions", y: 15, color: "hsl(var(--accent))" },
-    { name: "Other", y: 10, color: "hsl(var(--muted))" },
-  ],
-
-  weeklyPieData: [
-    { name: "Online Sales", y: 55, color: "hsl(var(--primary))" },
-    { name: "In-Store", y: 25, color: "hsl(var(--secondary))" },
-    { name: "Mobile App", y: 20, color: "hsl(var(--accent))" },
-  ],
-
   // KPI data
   kpiData: [
     {
@@ -169,10 +155,5 @@ export const useAnalyticsStore = create((set, get) => ({
   getCurrentBarData: () => {
     const { activeView, monthlyData, weeklyData } = get();
     return activeView === "monthly" ? monthlyData : weeklyData;
-  },
-
-  getCurrentPieData: () => {
-    const { activeView, monthlyPieData, weeklyPieData } = get();
-    return activeView === "monthly" ? monthlyPieData : weeklyPieData;
   },
 }));

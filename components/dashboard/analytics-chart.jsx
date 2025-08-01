@@ -16,7 +16,6 @@ export default function AnalyticsChart() {
     activeView,
     setActiveView,
     getCurrentBarData,
-    getCurrentPieData,
     transactionsData,
     filters,
   } = useAnalyticsStore();
