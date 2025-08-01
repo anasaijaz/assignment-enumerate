@@ -7,6 +7,21 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    fontSize: {
+      xs: ["0.75rem", { lineHeight: "1rem" }],
+      sm: ["0.875rem", { lineHeight: "1.25rem" }],
+      base: ["1rem", { lineHeight: "1.5rem" }],
+      lg: ["1.125rem", { lineHeight: "1.75rem" }],
+      xl: ["1.25rem", { lineHeight: "1.75rem" }],
+      "2xl": ["1.5rem", { lineHeight: "2rem" }],
+      "3xl": ["1.875rem", { lineHeight: "2.25rem" }],
+      "4xl": ["2.25rem", { lineHeight: "2.5rem" }],
+      "5xl": ["3rem", { lineHeight: "1" }],
+      "6xl": ["3.75rem", { lineHeight: "1" }],
+      "7xl": ["4.5rem", { lineHeight: "1" }],
+      "8xl": ["6rem", { lineHeight: "1" }],
+      "9xl": ["8rem", { lineHeight: "1" }],
+    },
     extend: {
       fontFamily: {
         sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
@@ -75,50 +90,6 @@ module.exports = {
         3.5: "0.875rem", // 14px
         7: "1.75rem", // 28px
         9: "2.25rem", // 36px
-      },
-      fontSize: {
-        h1: [
-          "2.25rem",
-          {
-            lineHeight: "2.5rem",
-            letterSpacing: "-0.025em",
-            fontWeight: "800",
-          },
-        ],
-        h2: [
-          "1.875rem",
-          {
-            lineHeight: "2.25rem",
-            letterSpacing: "-0.025em",
-            fontWeight: "700",
-          },
-        ],
-        h3: [
-          "1.5rem",
-          { lineHeight: "2rem", letterSpacing: "0", fontWeight: "600" },
-        ],
-        h4: [
-          "1.25rem",
-          { lineHeight: "1.75rem", letterSpacing: "0", fontWeight: "600" },
-        ],
-        "body-large": [
-          "1.125rem",
-          { lineHeight: "1.75rem", fontWeight: "400" },
-        ],
-        body: ["1rem", { lineHeight: "1.5rem", fontWeight: "400" }],
-        "body-small": [
-          "0.875rem",
-          { lineHeight: "1.25rem", fontWeight: "400" },
-        ],
-        caption: [
-          "0.75rem",
-          { lineHeight: "1rem", letterSpacing: "0.025em", fontWeight: "400" },
-        ],
-        label: ["0.875rem", { lineHeight: "1.25rem", fontWeight: "500" }],
-        "label-small": [
-          "0.75rem",
-          { lineHeight: "1rem", letterSpacing: "0.025em", fontWeight: "500" },
-        ],
       },
       borderRadius: {
         lg: "var(--radius)",
