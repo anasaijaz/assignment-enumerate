@@ -88,6 +88,7 @@ const mediaSlice = createSlice({
         id: Date.now(),
         ...action.payload,
       };
+
       state.mediaFiles.push(newFile);
       state.uploadError = null;
     },
@@ -166,13 +167,14 @@ export const uploadMediaFile = (file) => async (dispatch) => {
 
     dispatch(setUploadProgress(80));
 
-    // Create media file object
+    // Create media file object with file URL
+    const fileUrl = URL.createObjectURL(file);
     const mediaFile = {
       name: file.name,
       type: fileType,
       duration,
       size: formattedSize,
-      file,
+      url: fileUrl,
       thumbnail,
     };
 

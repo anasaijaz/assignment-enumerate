@@ -1,4 +1,5 @@
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -6,11 +7,11 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
-  Maximize,
   FileVideo,
   FileAudio,
   FileImage,
 } from "lucide-react";
+import { setCurrentTime } from "../../store/timelineSlice";
 
 export default function VideoPreview({
   isPlaying,
@@ -18,8 +19,149 @@ export default function VideoPreview({
   currentTime,
   formatTime,
 }) {
+  const dispatch = useDispatch();
   const { clips, totalDuration } = useSelector((state) => state.timeline);
-  const { files = [] } = useSelector((state) => state.media);
+  const { mediaFiles = [] } = useSelector((state) => state.media);
+  const timerRef = useRef(null);
+  const videoRef = useRef(null);
+  const audioRef = useRef(null);
+  const [volume, setVolume] = useState(0.75);
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Prevent default behavior if we're handling the key
+      if (
+        e.code === "Space" ||
+        e.code === "ArrowLeft" ||
+        e.code === "ArrowRight"
+      ) {
+        e.preventDefault();
+
+        // Only handle keyboard if not typing in an input/textarea
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+          return;
+        }
+
+        switch (e.code) {
+          case "Space":
+            // Toggle play/pause
+            if (clips?.length > 0) {
+              setIsPlaying(!isPlaying);
+            }
+            break;
+          case "ArrowLeft":
+            // Seek backward 1 second
+            const newTimeBackward = Math.max(0, currentTime - 1);
+            dispatch(setCurrentTime(newTimeBackward));
+            break;
+          case "ArrowRight":
+            // Seek forward 1 second
+            const newTimeForward = Math.min(totalDuration, currentTime + 1);
+            dispatch(setCurrentTime(newTimeForward));
+            break;
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPlaying, setIsPlaying, currentTime, totalDuration, clips, dispatch]);
+
+  // Timer to update current time during playback
+  useEffect(() => {
+    if (isPlaying && clips.length > 0) {
+      timerRef.current = setInterval(() => {
+        const newTime = currentTime + 0.1; // Update every 100ms
+
+        // Stop playback when reaching the end of timeline
+        if (newTime >= totalDuration) {
+          setIsPlaying(false);
+          dispatch(setCurrentTime(totalDuration));
+        } else {
+          dispatch(setCurrentTime(newTime));
+        }
+      }, 100); // 100ms intervals for smooth playback
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    // Cleanup timer on unmount
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [
+    isPlaying,
+    clips.length,
+    totalDuration,
+    currentTime,
+    dispatch,
+    setIsPlaying,
+  ]);
+
+  // Sync media element current time with timeline position
+  useEffect(() => {
+    // Find the current clip based on timeline position
+    const getCurrentClipForSync = () => {
+      if (!clips?.length) return null;
+
+      for (const clip of clips) {
+        if (currentTime >= clip.startTime && currentTime < clip.endTime) {
+          const mediaFile = mediaFiles.find(
+            (file) => file.id === clip.mediaFileId
+          );
+          return {
+            ...clip,
+            url: mediaFile?.url,
+            thumbnail: mediaFile?.thumbnail,
+          };
+        }
+      }
+      return null;
+    };
+
+    const currentClip = getCurrentClipForSync();
+    if (!currentClip) return;
+
+    const mediaElement =
+      currentClip.type === "video"
+        ? videoRef.current
+        : currentClip.type === "audio"
+        ? audioRef.current
+        : null;
+
+    if (mediaElement) {
+      // Calculate the time within the current clip
+      const clipStartTime = currentClip.trimStart || 0;
+      const relativeTime = currentTime - currentClip.startTime;
+      const mediaTime = clipStartTime + relativeTime;
+
+      // Only update if there's a significant difference to avoid infinite loops
+      if (Math.abs(mediaElement.currentTime - mediaTime) > 0.2) {
+        mediaElement.currentTime = Math.max(0, mediaTime);
+      }
+
+      // Set volume
+      mediaElement.volume = volume;
+
+      // Sync play/pause state
+      if (isPlaying && mediaElement.paused) {
+        mediaElement.play().catch(console.error);
+      } else if (!isPlaying && !mediaElement.paused) {
+        mediaElement.pause();
+      }
+    }
+  }, [currentTime, isPlaying, clips, mediaFiles, volume]);
 
   // Find the current clip based on timeline position
   const getCurrentClip = () => {
@@ -28,10 +170,13 @@ export default function VideoPreview({
     for (const clip of clips) {
       if (currentTime >= clip.startTime && currentTime < clip.endTime) {
         // Find the corresponding media file
-        const mediaFile = files.find((file) => file.id === clip.mediaFileId);
+        const mediaFile = mediaFiles.find(
+          (file) => file.id === clip.mediaFileId
+        );
+
         return {
           ...clip,
-          file: mediaFile?.file,
+          url: mediaFile?.url,
           thumbnail: mediaFile?.thumbnail,
         };
       }
@@ -43,12 +188,18 @@ export default function VideoPreview({
 
   const renderPreviewContent = () => {
     if (!currentClip) {
+      // If there are clips on the timeline but none at current position, show black screen
+      if (clips?.length > 0) {
+        return <div className="absolute inset-0 bg-black" />;
+      }
+
+      // Only show "No content" message when timeline is completely empty
       return (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <FileVideo className="h-20 w-20 mx-auto mb-4 text-gray-500" />
-            <p className="text-gray-400">No content on timeline</p>
-            <p className="text-sm text-gray-500">
+            <FileVideo className="h-20 w-20 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No content on timeline</p>
+            <p className="text-sm text-muted-foreground">
               Add media to the timeline to preview
             </p>
           </div>
@@ -56,27 +207,26 @@ export default function VideoPreview({
       );
     }
 
-    if (currentClip.type === "video" && currentClip.file) {
+    if (currentClip.type === "video" && currentClip.url) {
       return (
         <video
+          ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain"
-          src={URL.createObjectURL(currentClip.file)}
+          src={currentClip.url}
           controls={false}
-          muted
         />
       );
     }
 
     if (currentClip.type === "audio") {
       return (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <FileAudio className="h-20 w-20 mx-auto mb-4 text-green-500" />
-            <p className="text-gray-400">{currentClip.name}</p>
-            <p className="text-sm text-gray-500">
-              Audio File • {formatTime(currentClip.duration)}
-            </p>
-          </div>
+        <div className="absolute inset-0 bg-black">
+          <audio
+            ref={audioRef}
+            src={currentClip.url}
+            controls={false}
+            style={{ display: "none" }}
+          />
         </div>
       );
     }
@@ -96,9 +246,9 @@ export default function VideoPreview({
     return (
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
-          <FileImage className="h-20 w-20 mx-auto mb-4 text-purple-500" />
-          <p className="text-gray-400">{currentClip.name}</p>
-          <p className="text-sm text-gray-500">
+          <FileImage className="h-20 w-20 mx-auto mb-4 text-info" />
+          <p className="text-muted-foreground">{currentClip.name}</p>
+          <p className="text-sm text-muted-foreground">
             {currentClip.type} • {formatTime(currentClip.duration)}
           </p>
         </div>
@@ -106,23 +256,43 @@ export default function VideoPreview({
     );
   };
   return (
-    <div className="flex-1 bg-gray-800 flex flex-col">
-      <div className="p-4 border-b border-gray-700">
-        <h2 className="text-lg font-semibold">
-          {currentClip ? currentClip.name : "Timeline Preview"}
-        </h2>
-        {currentClip && (
-          <p className="text-sm text-gray-400 mt-1">
-            {currentClip.type} • {formatTime(currentClip.duration)} •{" "}
-            {formatTime(currentClip.startTime)}-
-            {formatTime(currentClip.endTime)}
-          </p>
-        )}
-        {!currentClip && clips?.length > 0 && (
-          <p className="text-sm text-gray-400 mt-1">
-            {clips.length} clip{clips.length !== 1 ? "s" : ""} on timeline
-          </p>
-        )}
+    <div className="flex-1 bg-background border-r border-border flex flex-col">
+      <div className="px-6 py-4 border-b border-border bg-background">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {currentClip ? currentClip.name : "Timeline Preview"}
+            </h2>
+            {currentClip && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {currentClip.type} • {formatTime(currentClip.duration)} •{" "}
+                {formatTime(currentClip.startTime)}-
+                {formatTime(currentClip.endTime)}
+              </p>
+            )}
+            {!currentClip && clips?.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {clips.length} clip{clips.length !== 1 ? "s" : ""} on timeline
+              </p>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground font-medium">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground border border-border rounded text-[10px] font-medium">
+                  SPACE
+                </kbd>
+                Play/Pause
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground border border-border rounded text-[10px] font-medium">
+                  ←→
+                </kbd>
+                Seek ±1s
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="flex-1 flex flex-col">
         {/* Preview Area - 16:9 Aspect Ratio */}
@@ -132,89 +302,87 @@ export default function VideoPreview({
           </div>
 
           {/* Overlay Controls */}
+          {/* Overlay Controls */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg">
-            {/* Top Controls */}
-            <div className="absolute top-4 right-4">
-              <button className="p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors">
-                <Maximize className="h-4 w-4 text-white" />
-              </button>
-            </div>
-
             {/* Center Play Button */}
             <div className="absolute inset-0 flex items-center justify-center">
               <button
-                className="p-4 bg-black/60 hover:bg-black/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-4 bg-primary/80 hover:bg-primary rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 onClick={() => setIsPlaying(!isPlaying)}
-                disabled={!currentClip || currentClip.type === "image"}
+                disabled={clips?.length === 0}
               >
                 {isPlaying ? (
-                  <Pause className="h-8 w-8 text-white" />
+                  <Pause className="h-8 w-8 text-primary-foreground" />
                 ) : (
-                  <Play className="h-8 w-8 text-white ml-1" />
+                  <Play className="h-8 w-8 text-primary-foreground ml-1" />
                 )}
               </button>
             </div>
 
             {/* Bottom Controls */}
             <div className="absolute bottom-4 left-4 right-4">
-              {/* Progress Bar */}
+              {/* Progress Bar - HTML Range Slider */}
               <div className="mb-4">
-                <div className="relative">
-                  <div className="w-full h-1 bg-white/30 rounded-full">
-                    <div
-                      className="h-1 bg-white rounded-full transition-all"
-                      style={{
-                        width: `${
-                          totalDuration > 0
-                            ? (currentTime / totalDuration) * 100
-                            : 0
-                        }%`,
-                      }}
-                    ></div>
-                  </div>
-                  <div
-                    className="absolute top-0 w-3 h-3 bg-white rounded-full transform -translate-y-1 transition-all opacity-0 hover:opacity-100"
-                    style={{
-                      left: `${
-                        totalDuration > 0
-                          ? (currentTime / totalDuration) * 100
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={totalDuration}
+                  step="0.1"
+                  value={currentTime}
+                  onChange={(e) =>
+                    dispatch(setCurrentTime(parseFloat(e.target.value)))
+                  }
+                  className="w-full h-1 bg-transparent rounded-full appearance-none cursor-pointer focus:outline-none focus:ring-0"
+                  style={{
+                    background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${
+                      totalDuration > 0
+                        ? (currentTime / totalDuration) * 100
+                        : 0
+                    }%, rgba(255,255,255,0.3) ${
+                      totalDuration > 0
+                        ? (currentTime / totalDuration) * 100
+                        : 0
+                    }%, rgba(255,255,255,0.3) 100%)`,
+                    height: "4px",
+                    WebkitAppearance: "none",
+                    outline: "none",
+                  }}
+                />
               </div>
 
               {/* Control Buttons Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button
-                    className="p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors disabled:opacity-50"
-                    disabled={!currentClip || currentClip.type === "image"}
-                  >
-                    <SkipBack className="h-4 w-4 text-white" />
-                  </button>
-                  <button
-                    className="p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors disabled:opacity-50"
-                    disabled={!currentClip || currentClip.type === "image"}
-                  >
-                    <SkipForward className="h-4 w-4 text-white" />
-                  </button>
-                  <div className="flex items-center gap-2 ml-2">
-                    <Volume2 className="h-4 w-4 text-white" />
-                    <div className="w-16 h-1 bg-white/30 rounded-full">
-                      <div
-                        className="h-1 bg-white rounded-full"
-                        style={{ width: "75%" }}
-                      ></div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 ml-2">
+                      <Volume2 className="h-4 w-4 text-white" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={volume}
+                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                        className="w-16 h-1 bg-white/30 rounded-full appearance-none cursor-pointer focus:outline-none focus:ring-0"
+                        style={{
+                          background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${
+                            volume * 100
+                          }%, rgba(255,255,255,0.3) ${
+                            volume * 100
+                          }%, rgba(255,255,255,0.3) 100%)`,
+                          height: "4px",
+                          WebkitAppearance: "none",
+                          outline: "none",
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-white">
-                  <span>{formatTime(currentTime)}</span>
+                <div className="flex items-center gap-2 text-xs text-white font-medium">
+                  <span>{Math.round(currentTime)}s</span>
                   <span>/</span>
-                  <span>{formatTime(totalDuration)}</span>
+                  <span>{Math.round(totalDuration)}s</span>
                 </div>
               </div>
             </div>

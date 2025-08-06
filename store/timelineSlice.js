@@ -5,7 +5,6 @@ const initialState = {
   totalDuration: 0,
   currentTime: 0,
   isPlaying: false,
-  zoom: 1, // Timeline zoom level
   pixelsPerSecond: 100, // 100 pixels represent one second
 };
 
@@ -13,7 +12,10 @@ const initialState = {
 const calculateClipPositions = (clips, pixelsPerSecond = 100) => {
   let currentPosition = 0;
   return clips.map((clip) => {
-    const clipDuration = clip.duration; // Use the actual duration from the clip
+    // Use trimmed duration instead of original duration
+    const trimStart = clip.trimStart || 0;
+    const trimEnd = clip.trimEnd || clip.duration;
+    const clipDuration = trimEnd - trimStart;
     const clipWithPosition = {
       ...clip,
       startTime: currentPosition,
@@ -29,7 +31,11 @@ const calculateClipPositions = (clips, pixelsPerSecond = 100) => {
 // Helper function to calculate total timeline duration
 const calculateTotalDuration = (clips) => {
   return clips.reduce((total, clip) => {
-    return total + clip.duration;
+    // Use trimmed duration instead of original duration
+    const trimStart = clip.trimStart || 0;
+    const trimEnd = clip.trimEnd || clip.duration;
+    const trimmedDuration = trimEnd - trimStart;
+    return total + trimmedDuration;
   }, 0);
 };
 
@@ -118,16 +124,86 @@ const timelineSlice = createSlice({
       state.isPlaying = action.payload;
     },
 
-    setZoom: (state, action) => {
-      state.zoom = action.payload;
-      state.pixelsPerSecond = 100 * action.payload;
+    trimClip: (state, action) => {
+      const { clipId, trimStart, trimEnd } = action.payload;
 
-      // Recalculate all clip positions with new zoom
-      state.clips = state.clips.map((clip) => ({
-        ...clip,
-        pixelStart: clip.startTime * state.pixelsPerSecond,
-        pixelWidth: clip.duration * state.pixelsPerSecond,
-      }));
+      const clipIndex = state.clips.findIndex((clip) => clip.id === clipId);
+      if (clipIndex !== -1) {
+        const clip = state.clips[clipIndex];
+        const trimmedDuration = trimEnd - trimStart;
+
+        // Calculate how much we're trimming from the start
+        const originalTrimStart = clip.trimStart || 0;
+        const trimFromStart = trimStart - originalTrimStart;
+
+        // New start time: move right if we're trimming from start
+        const newStartTime = clip.startTime + trimFromStart;
+        const newEndTime = newStartTime + trimmedDuration;
+
+        // Update the clip with new position and trim values
+        state.clips[clipIndex] = {
+          ...clip,
+          trimStart: trimStart,
+          trimEnd: trimEnd,
+          startTime: newStartTime,
+          endTime: newEndTime,
+          pixelStart: newStartTime * state.pixelsPerSecond,
+          pixelWidth: trimmedDuration * state.pixelsPerSecond,
+        };
+
+        console.log("Updated clip:", { ...state.clips[clipIndex] });
+
+        // Update total duration only if this was the last clip or if it affects the timeline end
+        const maxEndTime = Math.max(...state.clips.map((c) => c.endTime));
+        state.totalDuration = maxEndTime;
+      }
+    },
+
+    setClipPosition: (state, action) => {
+      const { clipId, newStartTime } = action.payload;
+
+      const clipIndex = state.clips.findIndex((clip) => clip.id === clipId);
+      if (clipIndex !== -1) {
+        const clip = state.clips[clipIndex];
+        const trimStart = clip.trimStart || 0;
+        const trimEnd = clip.trimEnd || clip.duration;
+        const trimmedDuration = trimEnd - trimStart;
+        const clampedStartTime = Math.max(0, newStartTime);
+        const newEndTime = clampedStartTime + trimmedDuration;
+
+        // Check for overlaps with other clips
+        const otherClips = state.clips.filter((c) => c.id !== clipId);
+        const hasOverlap = otherClips.some((otherClip) => {
+          const otherTrimStart = otherClip.trimStart || 0;
+          const otherTrimEnd = otherClip.trimEnd || otherClip.duration;
+          const otherStart = otherClip.startTime;
+          const otherEnd =
+            otherClip.startTime + (otherTrimEnd - otherTrimStart);
+
+          // Check if new position would overlap with this clip
+          return (
+            (clampedStartTime >= otherStart && clampedStartTime < otherEnd) ||
+            (newEndTime > otherStart && newEndTime <= otherEnd) ||
+            (clampedStartTime <= otherStart && newEndTime >= otherEnd)
+          );
+        });
+
+        // Only update position if there's no overlap
+        if (!hasOverlap) {
+          // Update clip position
+          state.clips[clipIndex] = {
+            ...clip,
+            startTime: clampedStartTime,
+            endTime: newEndTime,
+            pixelStart: clampedStartTime * state.pixelsPerSecond,
+          };
+
+          // Update total duration if needed
+          if (newEndTime > state.totalDuration) {
+            state.totalDuration = newEndTime;
+          }
+        }
+      }
     },
 
     clearTimeline: (state) => {
@@ -145,7 +221,8 @@ export const {
   moveClip,
   setCurrentTime,
   setIsPlaying,
-  setZoom,
+  trimClip,
+  setClipPosition,
   clearTimeline,
 } = timelineSlice.actions;
 
