@@ -12,6 +12,9 @@ import {
   FileImage,
 } from "lucide-react";
 import { setCurrentTime } from "../../store/timelineSlice";
+import spacebarKey from "@/assets/keys/spacebar.png";
+import leftKey from "@/assets/keys/left.png";
+import rightKey from "@/assets/keys/right.png";
 
 export default function VideoPreview({
   isPlaying,
@@ -278,16 +281,35 @@ export default function VideoPreview({
           </div>
           <div className="text-xs text-muted-foreground font-medium">
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="px-2 py-1 bg-muted text-muted-foreground border border-border rounded text-[10px] font-medium">
-                  SPACE
-                </kbd>
+              <span className="flex items-center gap-2">
+                <div className="flex items-center">
+                  <Image
+                    src={spacebarKey}
+                    alt="Spacebar key"
+                    width={40}
+                    height={24}
+                    className="opacity-70"
+                  />
+                </div>
                 Play/Pause
               </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-2 py-1 bg-muted text-muted-foreground border border-border rounded text-[10px] font-medium">
-                  ←→
-                </kbd>
+              <span className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Image
+                    src={leftKey}
+                    alt="Left arrow key"
+                    width={16}
+                    height={16}
+                    className="opacity-70"
+                  />
+                  <Image
+                    src={rightKey}
+                    alt="Right arrow key"
+                    width={16}
+                    height={16}
+                    className="opacity-70"
+                  />
+                </div>
                 Seek ±1s
               </span>
             </div>
